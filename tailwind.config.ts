@@ -47,16 +47,19 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
+        game: {
+          snake: "hsl(var(--snake-body))",
+          head: "hsl(var(--snake-head))",
+          food: "hsl(var(--food))",
+          bg: "hsl(var(--game-bg))",
         },
+        grid: {
+          line: "hsl(var(--grid-line))",
+          glow: "hsl(var(--grid-glow))",
+        },
+      },
+      fontFamily: {
+        mono: ['JetBrains Mono', 'monospace'],
       },
       borderRadius: {
         lg: "var(--radius)",
