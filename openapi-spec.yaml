@@ -1,0 +1,585 @@
+openapi: 3.0.3
+info:
+  title: Snake Showdown API
+  description: |
+    Backend API for Snake Showdown - a modern neon snake game with multiplayer features.
+    
+    This API provides endpoints for user authentication, game score management, leaderboards, 
+    and live game spectating capabilities.
+  version: 1.0.0
+  contact:
+    name: Snake Showdown Team
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+  - url: https://api.snake-showdown.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Game
+    description: Game-related operations including scores and live games
+  - name: Player
+    description: Player profile and statistics
+
+security:
+  - BearerAuth: []
+
+paths:
+  /auth/signup:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Creates a new user account with email, password, and username
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - username
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: player@neon.game
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: SecurePass123!
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 20
+                  pattern: '^[a-zA-Z0-9_]+$'
+                  example: SnakeMaster
+      responses:
+        '201':
+          description: User successfully created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/AuthUser'
+                  token:
+                    type: string
+                    description: JWT authentication token
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email or username already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Conflict
+                message: Email or username already in use
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Authenticates a user with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: player@neon.game
+                password:
+                  type: string
+                  format: password
+                  example: SecurePass123!
+      responses:
+        '200':
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/AuthUser'
+                  token:
+                    type: string
+                    description: JWT authentication token
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Unauthorized
+                message: Invalid email or password
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: Invalidates the current user session/token
+      responses:
+        '200':
+          description: Successfully logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Successfully logged out
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user
+      description: Returns the currently authenticated user's information
+      responses:
+        '200':
+          description: Current user data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /game/score:
+    post:
+      tags:
+        - Game
+      summary: Submit game score
+      description: Submits a completed game score for the authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - score
+                - mode
+              properties:
+                score:
+                  type: integer
+                  minimum: 0
+                  example: 250
+                  description: Final game score
+                mode:
+                  $ref: '#/components/schemas/GameMode'
+      responses:
+        '201':
+          description: Score successfully submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Score submitted successfully
+                  isNewHighScore:
+                    type: boolean
+                    description: Whether this score is a new personal best
+                    example: true
+                  rank:
+                    type: integer
+                    description: Current rank on the leaderboard
+                    example: 5
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /game/leaderboard:
+    get:
+      tags:
+        - Game
+      summary: Get leaderboard
+      description: Returns the top players ranked by high score
+      parameters:
+        - name: mode
+          in: query
+          description: Filter leaderboard by game mode
+          required: false
+          schema:
+            $ref: '#/components/schemas/GameMode'
+        - name: limit
+          in: query
+          description: Maximum number of entries to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: offset
+          in: query
+          description: Number of entries to skip for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeaderboardEntry'
+                  total:
+                    type: integer
+                    description: Total number of entries available
+                    example: 150
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /game/live:
+    get:
+      tags:
+        - Game
+      summary: Get live games
+      description: Returns currently active games for spectating
+      parameters:
+        - name: mode
+          in: query
+          description: Filter by game mode
+          required: false
+          schema:
+            $ref: '#/components/schemas/GameMode'
+        - name: limit
+          in: query
+          description: Maximum number of games to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: List of active games
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LiveGame'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /player/profile:
+    get:
+      tags:
+        - Player
+      summary: Get player profile
+      description: Returns the authenticated player's profile and statistics
+      responses:
+        '200':
+          description: Player profile data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login or signup endpoint
+
+  schemas:
+    GameMode:
+      type: string
+      enum:
+        - walls
+        - passthrough
+      description: |
+        Game mode type:
+        - walls: Classic mode where hitting walls ends the game
+        - passthrough: Snake wraps around screen edges
+      example: walls
+
+    Direction:
+      type: string
+      enum:
+        - UP
+        - DOWN
+        - LEFT
+        - RIGHT
+      example: RIGHT
+
+    Position:
+      type: object
+      required:
+        - x
+        - y
+      properties:
+        x:
+          type: integer
+          minimum: 0
+          example: 15
+        y:
+          type: integer
+          minimum: 0
+          example: 10
+
+    Snake:
+      type: object
+      required:
+        - body
+        - direction
+      properties:
+        body:
+          type: array
+          items:
+            $ref: '#/components/schemas/Position'
+          minItems: 1
+          description: Array of positions representing the snake's body segments
+          example:
+            - { x: 15, y: 15 }
+            - { x: 14, y: 15 }
+            - { x: 13, y: 15 }
+        direction:
+          $ref: '#/components/schemas/Direction'
+
+    GameState:
+      type: object
+      required:
+        - snake
+        - food
+        - score
+        - isGameOver
+        - isPaused
+        - mode
+      properties:
+        snake:
+          $ref: '#/components/schemas/Snake'
+        food:
+          $ref: '#/components/schemas/Position'
+        score:
+          type: integer
+          minimum: 0
+          example: 150
+        isGameOver:
+          type: boolean
+          example: false
+        isPaused:
+          type: boolean
+          example: false
+        mode:
+          $ref: '#/components/schemas/GameMode'
+
+    AuthUser:
+      type: object
+      required:
+        - id
+        - username
+        - email
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        username:
+          type: string
+          example: SnakeMaster
+        email:
+          type: string
+          format: email
+          example: player@neon.game
+
+    Player:
+      type: object
+      required:
+        - id
+        - username
+        - score
+        - highScore
+        - gamesPlayed
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        username:
+          type: string
+          example: SnakeMaster
+        score:
+          type: integer
+          minimum: 0
+          description: Current game score (0 if not playing)
+          example: 0
+        highScore:
+          type: integer
+          minimum: 0
+          description: Player's all-time high score
+          example: 450
+        gamesPlayed:
+          type: integer
+          minimum: 0
+          description: Total number of games played
+          example: 89
+
+    LeaderboardEntry:
+      type: object
+      required:
+        - rank
+        - username
+        - score
+        - date
+      properties:
+        rank:
+          type: integer
+          minimum: 1
+          example: 1
+        username:
+          type: string
+          example: SnakeMaster
+        score:
+          type: integer
+          minimum: 0
+          example: 450
+        date:
+          type: string
+          format: date-time
+          description: Date when the high score was achieved
+          example: '2024-11-30T10:30:00Z'
+
+    LiveGame:
+      type: object
+      required:
+        - id
+        - player
+        - gameState
+        - startedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 789e0123-e45b-67c8-d901-234567890abc
+        player:
+          $ref: '#/components/schemas/Player'
+        gameState:
+          $ref: '#/components/schemas/GameState'
+        startedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the game started
+          example: '2024-11-30T12:30:00Z'
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          example: Bad Request
+        message:
+          type: string
+          example: Invalid input data
+        details:
+          type: object
+          description: Additional error details (optional)
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Bad Request
+            message: Invalid input data
+
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Unauthorized
+            message: Authentication required
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Not Found
+            message: Resource not found
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Internal Server Error
+            message: An unexpected error occurred

@@ -34,7 +34,7 @@ vi.mock('framer-motion', () => ({
 const renderWithRouter = (initialRoute = '/game?mode=walls') => {
   window.history.pushState({}, '', initialRoute);
   return render(
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Game />
     </BrowserRouter>
   );
@@ -47,38 +47,38 @@ describe('Game Page', () => {
 
   it('should render the game page', () => {
     renderWithRouter();
-    
+
     expect(screen.getByTestId('snake-game')).toBeInTheDocument();
     expect(screen.getByTestId('game-instructions')).toBeInTheDocument();
   });
 
   it('should display back button', () => {
     renderWithRouter();
-    
+
     expect(screen.getByText('Back')).toBeInTheDocument();
   });
 
   it('should display leaderboard button', () => {
     renderWithRouter();
-    
+
     expect(screen.getByText('Leaderboard')).toBeInTheDocument();
   });
 
   it('should pass correct mode to SnakeGame component', () => {
     renderWithRouter('/game?mode=passthrough');
-    
+
     expect(screen.getByText('Mode: passthrough')).toBeInTheDocument();
   });
 
   it('should default to walls mode if no mode specified', () => {
     renderWithRouter('/game');
-    
+
     expect(screen.getByText('Mode: walls')).toBeInTheDocument();
   });
 
   it('should pass game mode to instructions component', () => {
     renderWithRouter('/game?mode=passthrough');
-    
+
     expect(screen.getByText('Instructions for passthrough')).toBeInTheDocument();
   });
 });
