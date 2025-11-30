@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { SnakeGame } from '@/components/SnakeGame';
+import { GameInstructions } from '@/components/GameInstructions';
 import { Button } from '@/components/ui/button';
 import { GameMode } from '@/types/game';
 import { mockApi } from '@/services/mockBackend';
@@ -55,9 +56,12 @@ export default function Game() {
           </Button>
         </motion.div>
 
-        {/* Game */}
-        <div className="flex justify-center">
+        {/* Game and Instructions */}
+        <div className="flex flex-col lg:flex-row gap-8 items-start justify-center">
           <SnakeGame mode={mode} onGameOver={handleGameOver} />
+          <div className="w-full lg:w-80">
+            <GameInstructions mode={mode} />
+          </div>
         </div>
       </div>
     </div>
