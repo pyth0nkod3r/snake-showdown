@@ -1,0 +1,5 @@
+.DS_Store
+
+# Root-level dependencies (concurrently)
+/node_modules
+/package-lock.json

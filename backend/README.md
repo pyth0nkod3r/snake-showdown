@@ -59,20 +59,53 @@ uv add fastapi uvicorn pydantic
 
 ## Running the Server
 
-### Development Mode
+### Quick Start
+
+From the backend directory:
 
 ```bash
-# Run with auto-reload
+cd backend
 uv run python main.py
-
-# Or use uvicorn directly
-uv run uvicorn app.main:app --reload --port 3000
 ```
 
-The API will be available at:
-- **API**: http://localhost:3000
-- **Interactive Docs (Swagger)**: http://localhost:3000/docs
-- **Alternative Docs (ReDoc)**: http://localhost:3000/redoc
+The server will start on **http://localhost:3000** with auto-reload enabled.
+
+### Alternative: Using Uvicorn Directly
+
+```bash
+# Basic
+uv run uvicorn app.main:app --reload --port 3000
+
+# With all options
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 3000
+```
+
+**Options:**
+- `--reload` - Auto-restart on code changes (development only)
+- `--host 0.0.0.0` - Accept connections from any IP
+- `--port 3000` - Specify port (default: 3000)
+
+### Access Points
+
+Once running, the API is available at:
+
+- **API Base URL**: http://localhost:3000
+- **Interactive API Docs (Swagger UI)**: http://localhost:3000/docs
+- **Alternative API Docs (ReDoc)**: http://localhost:3000/redoc
+- **Health Check**: http://localhost:3000/health
+
+### Test the Server
+
+```bash
+# In another terminal
+curl http://localhost:3000/health
+# Should return: {"status":"healthy"}
+
+# Test signup
+curl -X POST http://localhost:3000/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123","username":"testuser"}'
+```
 
 ## Running Tests
 

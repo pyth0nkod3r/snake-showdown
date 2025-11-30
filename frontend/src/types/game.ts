@@ -48,3 +48,20 @@ export interface AuthUser {
   username: string;
   email: string;
 }
+
+export interface AuthResponse {
+  user: AuthUser;
+  token: string;
+}
+
+export interface ScoreResponse {
+  message: string;
+  isNewHighScore: boolean;
+  rank: number;
+}
+
+export interface LeaderboardResponse {
+  entries: LeaderboardEntry[];
+  total: number;
+}
+

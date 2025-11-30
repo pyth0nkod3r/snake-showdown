@@ -40,14 +40,26 @@ class MockDatabase:
     def _add_mock_players(self):
         """Add mock players with scores."""
         mock_players_data = [
-            {"username": "SnakeMaster", "email": "snake@example.com", "high_score": 450, "games_played": 89},
-            {"username": "NeonViper", "email": "neon@example.com", "high_score": 380, "games_played": 67},
-            {"username": "GridRunner", "email": "grid@example.com", "high_score": 320, "games_played": 54},
-            {"username": "ArcadeKing", "email": "arcade@example.com", "high_score": 290, "games_played": 45},
-            {"username": "PixelHunter", "email": "pixel@example.com", "high_score": 250, "games_played": 38},
+            # Top players
+            {"username": "SnakeMaster", "email": "snake@example.com", "high_score": 450, "games_played": 89, "mode": GameMode.WALLS},
+            {"username": "NeonViper", "email": "neon@example.com", "high_score": 380, "games_played": 67, "mode": GameMode.WALLS},
+            {"username": "GridRunner", "email": "grid@example.com", "high_score": 420, "games_played": 54, "mode": GameMode.PASSTHROUGH},
+            {"username": "ArcadeKing", "email": "arcade@example.com", "high_score": 290, "games_played": 45, "mode": GameMode.WALLS},
+            {"username": "PixelHunter", "email": "pixel@example.com", "high_score": 350, "games_played": 38, "mode": GameMode.PASSTHROUGH},
+            
+            # Mid-tier players
+            {"username": "SpeedDemon", "email": "speed@example.com", "high_score": 275, "games_played": 31, "mode": GameMode.WALLS},
+            {"username": "NinjaNoodle", "email": "ninja@example.com", "high_score": 310, "games_played": 42, "mode": GameMode.PASSTHROUGH},
+            {"username": "RetroGamer", "email": "retro@example.com", "high_score": 265, "games_played": 28, "mode": GameMode.WALLS},
+            {"username": "PixelPro", "email": "pixelpro@example.com", "high_score": 295, "games_played": 35, "mode": GameMode.PASSTHROUGH},
+            
+            # New players
+            {"username": "Beginner123", "email": "beginner@example.com", "high_score": 120, "games_played": 15, "mode": GameMode.WALLS},
+            {"username": "JustStarted", "email": "newbie@example.com", "high_score": 85, "games_played": 8, "mode": GameMode.WALLS},
+            {"username": "LearningSnake", "email": "learning@example.com", "high_score": 95, "games_played": 12, "mode": GameMode.PASSTHROUGH},
         ]
         
-       # Pre-computed bcrypt hash for password "demo123"
+        # Pre-computed bcrypt hash for password "demo123"
         demo_hash = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5BI6iFz.y9P9u"
         
         for data in mock_players_data:
@@ -67,14 +79,26 @@ class MockDatabase:
                 "high_score": data["high_score"],
                 "games_played": data["games_played"],
             }
-            # Add score
+            # Add high score to leaderboard
             self.scores.append({
                 "user_id": user_id,
                 "username": data["username"],
                 "score": data["high_score"],
-                "mode": GameMode.WALLS,
+                "mode": data["mode"],
                 "date": datetime.now(UTC) - timedelta(days=int(7 * (1 - data["high_score"] / 500))),
             })
+            
+            # Add some additional score history for variety (random lower scores)
+            import random
+            for _ in range(random.randint(2, 5)):
+                past_score = int(data["high_score"] * random.uniform(0.4, 0.9))
+                self.scores.append({
+                    "user_id": user_id,
+                    "username": data["username"],
+                    "score": past_score,
+                    "mode": data["mode"],
+                    "date": datetime.now(UTC) - timedelta(days=random.randint(1, 30)),
+                })
     
     # User operations
     def get_user_by_email(self, email: str) -> Optional[dict]:

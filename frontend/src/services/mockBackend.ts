@@ -1,137 +1,95 @@
-import { Player, LeaderboardEntry, LiveGame, AuthUser, GameState, GameMode } from '@/types/game';
-
-// Mock data storage
-let currentUser: AuthUser | null = null;
-
-const mockPlayers: Player[] = [
-  { id: '1', username: 'SnakeMaster', score: 0, highScore: 450, gamesPlayed: 89 },
-  { id: '2', username: 'NeonViper', score: 0, highScore: 380, gamesPlayed: 67 },
-  { id: '3', username: 'GridRunner', score: 0, highScore: 320, gamesPlayed: 54 },
-  { id: '4', username: 'ArcadeKing', score: 0, highScore: 290, gamesPlayed: 45 },
-  { id: '5', username: 'PixelHunter', score: 0, highScore: 250, gamesPlayed: 38 },
-];
+import {
+  Player,
+  LeaderboardEntry,
+  LiveGame,
+  AuthUser,
+  GameMode,
+  AuthResponse,
+  ScoreResponse,
+  LeaderboardResponse,
+} from '@/types/game';
+import * as api from './api';
 
 // Centralized API service
 export const mockApi = {
   // Auth endpoints
   async login(email: string, password: string): Promise<AuthUser> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const username = email.split('@')[0];
-    currentUser = {
-      id: Math.random().toString(36).substr(2, 9),
-      username: username,
+    const response = await api.post<AuthResponse>('/auth/login', {
       email,
-    };
-    
-    localStorage.setItem('mockUser', JSON.stringify(currentUser));
-    return currentUser;
+      password,
+    });
+
+    // Store token
+    api.setAuthToken(response.token);
+
+    return response.user;
   },
 
   async signup(email: string, password: string, username: string): Promise<AuthUser> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    currentUser = {
-      id: Math.random().toString(36).substr(2, 9),
-      username,
+    const response = await api.post<AuthResponse>('/auth/signup', {
       email,
-    };
-    
-    localStorage.setItem('mockUser', JSON.stringify(currentUser));
-    return currentUser;
+      password,
+      username,
+    });
+
+    // Store token
+    api.setAuthToken(response.token);
+
+    return response.user;
   },
 
   async logout(): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    currentUser = null;
-    localStorage.removeItem('mockUser');
+    try {
+      await api.post<void>('/auth/logout');
+    } finally {
+      // Always clear token even if request fails
+      api.clearAuthToken();
+    }
   },
 
   async getCurrentUser(): Promise<AuthUser | null> {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    if (currentUser) return currentUser;
-    
-    const stored = localStorage.getItem('mockUser');
-    if (stored) {
-      currentUser = JSON.parse(stored);
-      return currentUser;
+    try {
+      const user = await api.get<AuthUser>('/auth/me');
+      return user;
+    } catch (error) {
+      // If unauthorized or any error, return null
+      if (error instanceof api.ApiError && error.status === 401) {
+        api.clearAuthToken();
+      }
+      return null;
     }
-    
-    return null;
   },
 
   // Game endpoints
   async submitScore(score: number, mode: GameMode): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    console.log(`Score ${score} submitted for mode ${mode}`);
+    await api.post<ScoreResponse>('/game/score', {
+      score,
+      mode,
+    });
   },
 
   async getLeaderboard(mode: GameMode = 'walls'): Promise<LeaderboardEntry[]> {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    
-    return mockPlayers
-      .sort((a, b) => b.highScore - a.highScore)
-      .map((player, index) => ({
-        rank: index + 1,
-        username: player.username,
-        score: player.highScore,
-        date: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-      }));
+    const response = await api.get<LeaderboardResponse>(
+      `/game/leaderboard?mode=${mode}&limit=10&offset=0`
+    );
+    return response.entries;
   },
 
   async getLiveGames(): Promise<LiveGame[]> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // Return 3 random mock live games
-    const liveGames = mockPlayers.slice(0, 3).map(player => ({
-      id: Math.random().toString(36).substr(2, 9),
-      player,
-      gameState: this.generateMockGameState(),
-      startedAt: new Date(Date.now() - Math.random() * 10 * 60 * 1000).toISOString(),
-    }));
-    
-    return liveGames;
-  },
-
-  // Helper to generate mock game state
-  generateMockGameState(): GameState {
-    const score = Math.floor(Math.random() * 200);
-    const snakeLength = Math.max(3, Math.floor(score / 10) + 3);
-    
-    const body = Array.from({ length: snakeLength }, (_, i) => ({
-      x: 15 - i,
-      y: 15,
-    }));
-
-    return {
-      snake: {
-        body,
-        direction: ['UP', 'DOWN', 'LEFT', 'RIGHT'][Math.floor(Math.random() * 4)] as any,
-      },
-      food: {
-        x: Math.floor(Math.random() * 30),
-        y: Math.floor(Math.random() * 30),
-      },
-      score,
-      isGameOver: false,
-      isPaused: false,
-      mode: Math.random() > 0.5 ? 'walls' : 'passthrough',
-    };
+    const games = await api.get<LiveGame[]>('/game/live?limit=10');
+    return games;
   },
 
   // Player profile
   async getPlayerProfile(): Promise<Player | null> {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
-    if (!currentUser) return null;
-    
-    return {
-      id: currentUser.id,
-      username: currentUser.username,
-      score: 0,
-      highScore: Math.floor(Math.random() * 300),
-      gamesPlayed: Math.floor(Math.random() * 50),
-    };
+    try {
+      const player = await api.get<Player>('/player/profile');
+      return player;
+    } catch (error) {
+      if (error instanceof api.ApiError && error.status === 404) {
+        return null;
+      }
+      throw error;
+    }
   },
 };
