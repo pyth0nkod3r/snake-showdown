@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     api_description: str = "Backend API for Snake Showdown game"
     
     # CORS Settings
-    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
+    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000", "http://localhost:8080"]
     
     # JWT Settings
     secret_key: str = "your-secret-key-change-in-production"

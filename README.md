@@ -40,6 +40,22 @@ cd frontend
 npm run dev
 ```
 
+### Demo Login Credentials
+
+The app comes pre-loaded with demo users for testing. You can log in with any of these credentials:
+
+**Email:** Any of the following:
+- `snake@example.com`
+- `neon@example.com`
+- `grid@example.com`
+- `arcade@example.com`
+- `pixel@example.com`
+- (and more - see backend code for full list)
+
+**Password:** `demo123` (for all demo users)
+
+Or create your own account using the signup form!
+
 ## Project Structure
 
 ```

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { mockApi } from '@/services/mockBackend';
+import { ApiError } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { Zap } from 'lucide-react';
 
@@ -38,9 +39,18 @@ export default function Auth() {
       }
       navigate('/');
     } catch (error) {
+      // Get specific error message from API
+      let errorMessage = 'Something went wrong. Please try again.';
+
+      if (error instanceof ApiError) {
+        errorMessage = error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: 'Error',
-        description: 'Something went wrong. Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -120,7 +130,7 @@ export default function Auth() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-3">
             <button
               type="button"
               onClick={() => setIsLogin(!isLogin)}
@@ -128,6 +138,12 @@ export default function Auth() {
             >
               {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Login'}
             </button>
+            
+            {isLogin && (
+              <p className="text-xs text-muted-foreground">
+                Demo: Try <span className="text-primary">snake@example.com</span> / <span className="text-primary">demo123</span>
+              </p>
+            )}
           </div>
         </Card>
       </motion.div>

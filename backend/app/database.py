@@ -59,8 +59,9 @@ class MockDatabase:
             {"username": "LearningSnake", "email": "learning@example.com", "high_score": 95, "games_played": 12, "mode": GameMode.PASSTHROUGH},
         ]
         
-        # Pre-computed bcrypt hash for password "demo123"
-        demo_hash = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5BI6iFz.y9P9u"
+        # Bcrypt hash for password "demo123"
+        # Generated with: bcrypt.hashpw(b'demo123', bcrypt.gensalt())
+        demo_hash = "$2b$12$cF8SKf3mSYZ/Td/L5OeGa.hsz5Z5kG0i5mjhqnpezPxASjeEcYH3C"
         
         for data in mock_players_data:
             user_id = str(uuid.uuid4())

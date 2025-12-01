@@ -5,20 +5,32 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { mockApi } from '@/services/mockBackend';
 import { LeaderboardEntry } from '@/types/game';
-import { ArrowLeft, Trophy, Medal, Award } from 'lucide-react';
+import { ArrowLeft, Trophy, Medal, Award, RefreshCw } from 'lucide-react';
 
 export default function Leaderboard() {
   const navigate = useNavigate();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const loadLeaderboard = async () => {
+    try {
+      const data = await mockApi.getLeaderboard(undefined); // undefined = all modes
+      setEntries(data);
+    } catch (error) {
+      console.error('Failed to load leaderboard:', error);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadLeaderboard();
+  };
 
   useEffect(() => {
-    const loadLeaderboard = async () => {
-      const data = await mockApi.getLeaderboard();
-      setEntries(data);
-      setIsLoading(false);
-    };
-
     loadLeaderboard();
   }, []);
 
@@ -54,8 +66,16 @@ export default function Leaderboard() {
           </Button>
 
           <h1 className="text-4xl font-bold text-primary neon-text">LEADERBOARD</h1>
-          
-          <div className="w-24" /> {/* Spacer */}
+
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="neon-glow-secondary"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </motion.div>
 
         {/* Leaderboard */}
@@ -77,17 +97,16 @@ export default function Leaderboard() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className={`flex items-center justify-between p-4 rounded border ${
-                      entry.rank <= 3
-                        ? 'border-primary/40 bg-primary/5'
-                        : 'border-border bg-muted/20'
-                    }`}
+                    className={`flex items-center justify-between p-4 rounded border ${entry.rank <= 3
+                      ? 'border-primary/40 bg-primary/5'
+                      : 'border-border bg-muted/20'
+                      }`}
                   >
                     <div className="flex items-center gap-4 flex-1">
                       <div className="w-12 flex justify-center">
                         {getRankIcon(entry.rank)}
                       </div>
-                      
+
                       <div className="flex-1">
                         <div className="font-semibold text-foreground">{entry.username}</div>
                         <div className="text-xs text-muted-foreground">

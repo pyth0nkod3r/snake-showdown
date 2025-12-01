@@ -68,9 +68,16 @@ export const mockApi = {
     });
   },
 
-  async getLeaderboard(mode: GameMode = 'walls'): Promise<LeaderboardEntry[]> {
+  async getLeaderboard(mode?: GameMode): Promise<LeaderboardEntry[]> {
+    const queryParams = new URLSearchParams();
+    if (mode) {
+      queryParams.append('mode', mode);
+    }
+    queryParams.append('limit', '10');
+    queryParams.append('offset', '0');
+
     const response = await api.get<LeaderboardResponse>(
-      `/game/leaderboard?mode=${mode}&limit=10&offset=0`
+      `/game/leaderboard?${queryParams.toString()}`
     );
     return response.entries;
   },
