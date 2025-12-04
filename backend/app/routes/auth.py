@@ -2,10 +2,12 @@
 Authentication route handlers.
 """
 from fastapi import APIRouter, HTTPException, status, Depends
+from sqlalchemy.orm import Session
 
 from app.models import SignupRequest, LoginRequest, AuthResponse, AuthUser, ErrorResponse
 from app.services.auth_service import AuthService
 from app.auth import get_current_user
+from app.database import get_db
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -19,10 +21,10 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
         409: {"model": ErrorResponse},
     }
 )
-async def signup(request: SignupRequest):
+async def signup(request: SignupRequest, db: Session = Depends(get_db)):
     """Register a new user."""
     try:
-        return AuthService.signup(request.email, request.username, request.password)
+        return AuthService.signup(request.email, request.username, request.password, db)
     
     except ValueError as e:
         error_msg = str(e)
@@ -50,9 +52,9 @@ async def signup(request: SignupRequest):
         401: {"model": ErrorResponse},
     }
 )
-async def login(request: LoginRequest):
+async def login(request: LoginRequest, db: Session = Depends(get_db)):
     """Authenticate a user."""
-    user, error = AuthService.login(request.email, request.password)
+    user, error = AuthService.login(request.email, request.password, db)
     
     if error:
         raise HTTPException(

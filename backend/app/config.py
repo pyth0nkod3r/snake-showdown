@@ -21,7 +21,16 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440  # 24 hours
     
+    # Database Settings
+    database_url: str = "sqlite:///./snake_showdown.db"
+    database_echo: bool = False  # Set to True for SQL query logging
+    
+    # Connection pool settings (for PostgreSQL)
+    database_pool_size: int = 5
+    database_max_overflow: int = 10
+    
     model_config = ConfigDict(env_file=".env")
 
 
 settings = Settings()
+

@@ -2,7 +2,9 @@
 Authentication service - Business logic for user authentication.
 """
 from typing import Optional
-from app.database import db
+from sqlalchemy.orm import Session
+
+from app.database import Database
 from app.auth import create_access_token
 from app.models import AuthUser, AuthResponse
 
@@ -11,15 +13,24 @@ class AuthService:
     """Service for authentication operations."""
     
     @staticmethod
-    def signup(email: str, username: str, password: str) -> AuthResponse:
+    def signup(email: str, username: str, password: str, db: Session) -> AuthResponse:
         """
         Register a new user.
+        
+        Args:
+            email: User email
+            username: Username
+            password: Password
+            db: Database session
         
         Raises:
             ValueError: If email or username already exists
         """
+        # Create database instance with session
+        database = Database(db)
+        
         # Create user in database
-        user = db.create_user(email, username, password)
+        user = database.create_user(email, username, password)
         
         # Generate JWT token
         token = create_access_token(data={"sub": user["id"]})
@@ -34,21 +45,29 @@ class AuthService:
         return AuthResponse(user=auth_user, token=token)
     
     @staticmethod
-    def login(email: str, password: str) -> tuple[Optional[dict], Optional[str]]:
+    def login(email: str, password: str, db: Session) -> tuple[Optional[dict], Optional[str]]:
         """
         Authenticate a user.
+        
+        Args:
+            email: User email
+            password: Password
+            db: Database session
         
         Returns:
             Tuple of (user_dict, error_message)
         """
+        # Create database instance with session
+        database = Database(db)
+        
         # Get user by email
-        user = db.get_user_by_email(email)
+        user = database.get_user_by_email(email)
         
         if not user:
             return None, "Invalid email or password"
         
         # Verify password
-        if not db.verify_password(password, user["password_hash"]):
+        if not database.verify_password(password, user["password_hash"]):
             return None, "Invalid email or password"
         
         return user, None

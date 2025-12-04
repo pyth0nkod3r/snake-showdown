@@ -1,154 +1,186 @@
 """
-Mock database implementation.
-This will be replaced with a real database later.
+Database session management and repository using SQLAlchemy.
+Provides same interface as the previous MockDatabase for compatibility with services.
 """
 from datetime import datetime, timedelta, UTC
-from typing import Optional
+from typing import Optional, Generator
 import uuid
 import bcrypt
+from contextlib import contextmanager
 
-from app.models import (
-    GameMode,
-    AuthUser,
-    Player,
-    LeaderboardEntry,
-    LiveGame,
-    GameState,
-    Snake,
-    Position,
-    Direction,
-)
+from sqlalchemy import create_engine, select, func, desc
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import StaticPool
+
+from app.config import settings
+from app.db_models import Base, User, Player, Score
+from app.models import GameMode
 
 
-class MockDatabase:
-    """Mock in-memory database."""
+# Create engine with appropriate configuration
+if settings.database_url.startswith("sqlite"):
+    # SQLite configuration
+    engine = create_engine(
+        settings.database_url,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+        echo=settings.database_echo
+    )
+else:
+    # PostgreSQL configuration
+    engine = create_engine(
+        settings.database_url,
+        pool_size=settings.database_pool_size,
+        max_overflow=settings.database_max_overflow,
+        echo=settings.database_echo
+    )
+
+# Create session factory
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def get_db() -> Generator[Session, None, None]:
+    """
+    FastAPI dependency for database sessions.
+    Yields a database session and ensures it's closed after use.
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def init_db():
+    """Initialize database tables."""
+    Base.metadata.create_all(bind=engine)
+
+
+def drop_db():
+    """Drop all database tables (use with caution!)."""
+    Base.metadata.drop_all(bind=engine)
+
+
+class Database:
+    """
+    Database repository class.
+    Maintains same interface as MockDatabase for service compatibility.
+    """
     
-    def __init__(self):
-        """Initialize mock database with sample data."""
-        self.users: dict[str, dict] = {}
-        self.players: dict[str, dict] = {}
-        self.scores: list[dict] = []
-        self.live_games: list[dict] = []
-        self._initialized = False
-    
-    def _ensure_initialized(self):
-        """Ensure database is initialized with mock data."""
-        if not self._initialized:
-            self._add_mock_players()
-            self._initialized = True
-    
-    def _add_mock_players(self):
-        """Add mock players with scores."""
-        mock_players_data = [
-            # Top players
-            {"username": "SnakeMaster", "email": "snake@example.com", "high_score": 450, "games_played": 89, "mode": GameMode.WALLS},
-            {"username": "NeonViper", "email": "neon@example.com", "high_score": 380, "games_played": 67, "mode": GameMode.WALLS},
-            {"username": "GridRunner", "email": "grid@example.com", "high_score": 420, "games_played": 54, "mode": GameMode.PASSTHROUGH},
-            {"username": "ArcadeKing", "email": "arcade@example.com", "high_score": 290, "games_played": 45, "mode": GameMode.WALLS},
-            {"username": "PixelHunter", "email": "pixel@example.com", "high_score": 350, "games_played": 38, "mode": GameMode.PASSTHROUGH},
-            
-            # Mid-tier players
-            {"username": "SpeedDemon", "email": "speed@example.com", "high_score": 275, "games_played": 31, "mode": GameMode.WALLS},
-            {"username": "NinjaNoodle", "email": "ninja@example.com", "high_score": 310, "games_played": 42, "mode": GameMode.PASSTHROUGH},
-            {"username": "RetroGamer", "email": "retro@example.com", "high_score": 265, "games_played": 28, "mode": GameMode.WALLS},
-            {"username": "PixelPro", "email": "pixelpro@example.com", "high_score": 295, "games_played": 35, "mode": GameMode.PASSTHROUGH},
-            
-            # New players
-            {"username": "Beginner123", "email": "beginner@example.com", "high_score": 120, "games_played": 15, "mode": GameMode.WALLS},
-            {"username": "JustStarted", "email": "newbie@example.com", "high_score": 85, "games_played": 8, "mode": GameMode.WALLS},
-            {"username": "LearningSnake", "email": "learning@example.com", "high_score": 95, "games_played": 12, "mode": GameMode.PASSTHROUGH},
-        ]
+    def __init__(self, session: Optional[Session] = None):
+        """
+        Initialize database repository.
         
-        # Bcrypt hash for password "demo123"
-        # Generated with: bcrypt.hashpw(b'demo123', bcrypt.gensalt())
-        demo_hash = "$2b$12$cF8SKf3mSYZ/Td/L5OeGa.hsz5Z5kG0i5mjhqnpezPxASjeEcYH3C"
+        Args:
+            session: Optional SQLAlchemy session. If None, creates a new one.
+        """
+        self._session = session
+        self._owns_session = session is None
         
-        for data in mock_players_data:
-            user_id = str(uuid.uuid4())
-            # Create user
-            self.users[data["email"]] = {
-                "id": user_id,
-                "email": data["email"],
-                "username": data["username"],
-                "password_hash": demo_hash,
-            }
-            # Create player
-            self.players[user_id] = {
-                "id": user_id,
-                "username": data["username"],
-                "score": 0,
-                "high_score": data["high_score"],
-                "games_played": data["games_played"],
-            }
-            # Add high score to leaderboard
-            self.scores.append({
-                "user_id": user_id,
-                "username": data["username"],
-                "score": data["high_score"],
-                "mode": data["mode"],
-                "date": datetime.now(UTC) - timedelta(days=int(7 * (1 - data["high_score"] / 500))),
-            })
-            
-            # Add some additional score history for variety (random lower scores)
-            import random
-            for _ in range(random.randint(2, 5)):
-                past_score = int(data["high_score"] * random.uniform(0.4, 0.9))
-                self.scores.append({
-                    "user_id": user_id,
-                    "username": data["username"],
-                    "score": past_score,
-                    "mode": data["mode"],
-                    "date": datetime.now(UTC) - timedelta(days=random.randint(1, 30)),
-                })
+    @property
+    def session(self) -> Session:
+        """Get or create session."""
+        if self._session is None:
+            self._session = SessionLocal()
+        return self._session
+    
+    def close(self):
+        """Close session if we own it."""
+        if self._owns_session and self._session:
+            self._session.close()
+            self._session = None
+    
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.close()
     
     # User operations
     def get_user_by_email(self, email: str) -> Optional[dict]:
         """Get user by email."""
-        self._ensure_initialized()
-        return self.users.get(email)
+        user = self.session.execute(
+            select(User).where(User.email == email)
+        ).scalar_one_or_none()
+        
+        if not user:
+            return None
+        
+        return {
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "password_hash": user.password_hash,
+        }
     
     def get_user_by_id(self, user_id: str) -> Optional[dict]:
         """Get user by ID."""
-        self._ensure_initialized()
-        for user in self.users.values():
-            if user["id"] == user_id:
-                return user
-        return None
+        user = self.session.execute(
+            select(User).where(User.id == user_id)
+        ).scalar_one_or_none()
+        
+        if not user:
+            return None
+        
+        return {
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "password_hash": user.password_hash,
+        }
     
     def create_user(self, email: str, username: str, password: str) -> dict:
         """Create a new user."""
         # Check if email already exists
-        if email in self.users:
+        existing_email = self.session.execute(
+            select(User).where(User.email == email)
+        ).scalar_one_or_none()
+        
+        if existing_email:
             raise ValueError("Email already exists")
         
         # Check if username already exists
-        for user in self.users.values():
-            if user["username"] == username:
-                raise ValueError("Username already exists")
+        existing_username = self.session.execute(
+            select(User).where(User.username == username)
+        ).scalar_one_or_none()
         
-        user_id = str(uuid.uuid4())
-        # Hash password with bcrypt
+        if existing_username:
+            raise ValueError("Username already exists")
+        
+        # Hash password
         password_bytes = password.encode('utf-8')
         hashed = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
         
-        user = {
-            "id": user_id,
-            "email": email,
-            "username": username,
-            "password_hash": hashed.decode('utf-8'),
-        }
-        self.users[email] = user
+        # Create user
+        user_id = str(uuid.uuid4())
+        user = User(
+            id=user_id,
+            email=email,
+            username=username,
+            password_hash=hashed.decode('utf-8')
+        )
+        self.session.add(user)
         
         # Create player profile
-        self.players[user_id] = {
-            "id": user_id,
-            "username": username,
-            "score": 0,
-            "high_score": 0,
-            "games_played": 0,
-        }
+        player = Player(
+            id=user_id,
+            username=username,
+            score=0,
+            high_score=0,
+            games_played=0
+        )
+        self.session.add(player)
         
-        return user
+        self.session.commit()
+        
+        return {
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "password_hash": user.password_hash,
+        }
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify password against hash."""
@@ -159,30 +191,47 @@ class MockDatabase:
     # Player operations
     def get_player(self, user_id: str) -> Optional[dict]:
         """Get player profile."""
-        return self.players.get(user_id)
+        player = self.session.execute(
+            select(Player).where(Player.id == user_id)
+        ).scalar_one_or_none()
+        
+        if not player:
+            return None
+        
+        return {
+            "id": player.id,
+            "username": player.username,
+            "score": player.score,
+            "high_score": player.high_score,
+            "games_played": player.games_played,
+        }
     
     # Score operations
     def add_score(self, user_id: str, score: int, mode: GameMode) -> dict:
         """Add a score for a user."""
-        player = self.players.get(user_id)
+        player = self.session.execute(
+            select(Player).where(Player.id == user_id)
+        ).scalar_one_or_none()
+        
         if not player:
             raise ValueError("Player not found")
         
         # Update player stats
-        player["games_played"] += 1
-        is_new_high_score = score > player["high_score"]
+        player.games_played += 1
+        is_new_high_score = score > player.high_score
         if is_new_high_score:
-            player["high_score"] = score
+            player.high_score = score
         
         # Add score record
-        score_record = {
-            "user_id": user_id,
-            "username": player["username"],
-            "score": score,
-            "mode": mode,
-            "date": datetime.now(UTC),
-        }
-        self.scores.append(score_record)
+        score_record = Score(
+            user_id=user_id,
+            username=player.username,
+            score=score,
+            mode=mode
+        )
+        self.session.add(score_record)
+        
+        self.session.commit()
         
         # Calculate rank
         rank = self.get_rank(score, mode)
@@ -194,16 +243,25 @@ class MockDatabase:
     
     def get_rank(self, score: int, mode: GameMode) -> int:
         """Calculate rank for a score."""
-        mode_scores = [s["score"] for s in self.scores if s["mode"] == mode]
-        mode_scores.sort(reverse=True)
+        # Count scores higher than this one in the same mode
+        # Group by user, take max score per user
+        subquery = (
+            select(
+                Score.user_id,
+                func.max(Score.score).label('max_score')
+            )
+            .where(Score.mode == mode)
+            .group_by(Score.user_id)
+            .subquery()
+        )
         
-        # Find position of score
-        rank = 1
-        for s in mode_scores:
-            if score >= s:
-                return rank
-            rank += 1
-        return rank
+        higher_scores = self.session.execute(
+            select(func.count())
+            .select_from(subquery)
+            .where(subquery.c.max_score > score)
+        ).scalar()
+        
+        return higher_scores + 1
     
     def get_leaderboard(
         self,
@@ -212,89 +270,126 @@ class MockDatabase:
         offset: int = 0
     ) -> tuple[list[dict], int]:
         """Get leaderboard entries."""
+        # Build query for best score per user
+        query = select(
+            Score.user_id,
+            Score.username,
+            func.max(Score.score).label('max_score'),
+            func.max(Score.created_at).label('latest_date')
+        )
+        
         # Filter by mode if specified
-        filtered_scores = self.scores
         if mode:
-            filtered_scores = [s for s in self.scores if s["mode"] == mode]
+            query = query.where(Score.mode == mode)
         
-        # Group by user, keep highest score
-        user_best_scores: dict[str, dict] = {}
-        for score in filtered_scores:
-            user_id = score["user_id"]
-            if user_id not in user_best_scores or score["score"] > user_best_scores[user_id]["score"]:
-                user_best_scores[user_id] = score
+        # Group by user
+        query = query.group_by(Score.user_id, Score.username)
         
-        # Sort by score
-        sorted_scores = sorted(user_best_scores.values(), key=lambda x: x["score"], reverse=True)
+        # Get all results to sort and paginate
+        results = self.session.execute(query).all()
         
-        # Add ranks
+        # Sort by score descending
+        sorted_results = sorted(results, key=lambda x: x.max_score, reverse=True)
+        
+        # Paginate
+        total = len(sorted_results)
+        paginated_results = sorted_results[offset:offset + limit]
+        
+        # Build entries with rank
         entries = []
-        for rank, score in enumerate(sorted_scores[offset:offset + limit], start=offset + 1):
+        for rank, result in enumerate(paginated_results, start=offset + 1):
             entries.append({
                 "rank": rank,
-                "username": score["username"],
-                "score": score["score"],
-                "date": score["date"],
+                "username": result.username,
+                "score": result.max_score,
+                "date": result.latest_date,
             })
         
-        return entries, len(sorted_scores)
+        return entries, total
     
-    # Live game operations
+    # Live game operations (mock for now)
     def get_live_games(
         self,
         mode: Optional[GameMode] = None,
         limit: int = 10
     ) -> list[dict]:
-        """Get live games."""
-        # Generate mock live games
-        live_games = []
-        
-        # Take first 3 players
-        player_ids = list(self.players.keys())[:3]
-        for player_id in player_ids:
-            player = self.players[player_id]
-            game_state = self._generate_mock_game_state()
-            
-            live_game = {
-                "id": str(uuid.uuid4()),
-                "player": player,
-                "game_state": game_state,
-                "started_at": datetime.now(UTC) - timedelta(minutes=int(10 * (1 - game_state["score"] / 300))),
-            }
-            
-            # Filter by mode if specified
-            if mode is None or game_state["mode"] == mode:
-                live_games.append(live_game)
-        
-        return live_games[:limit]
-    
-    def _generate_mock_game_state(self) -> dict:
-        """Generate a mock game state."""
-        import random
-        
-        score = random.randint(0, 200)
-        snake_length = max(3, score // 10 + 3)
-        
-        body = [
-            {"x": 15 - i, "y": 15}
-            for i in range(snake_length)
+        """Get live games (returns empty list for now)."""
+        # Live games would require a real-time WebSocket implementation
+        # For now, return empty list to maintain compatibility
+        return []
+
+
+# Global database instance for backwards compatibility
+db = Database()
+
+
+def seed_db():
+    """Seed database with mock players and scores."""
+    with Database() as database:
+        mock_players_data = [
+            # Top players
+            {"username": "SnakeMaster", "email": "snake@example.com", "high_score": 450, "games_played": 89, "mode": GameMode.WALLS},
+            {"username": "NeonViper", "email": "neon@example.com", "high_score": 380, "games_played": 67, "mode": GameMode.WALLS},
+            {"username": "GridRunner", "email": "grid@example.com", "high_score": 420, "games_played": 54, "mode": GameMode.PASSTHROUGH},
+            {"username": "ArcadeKing", "email": "arcade@example.com", "high_score": 290, "games_played": 45, "mode": GameMode.WALLS},
+            {"username": "PixelHunter", "email": "pixel@example.com", "high_score": 350, "games_played": 38, "mode": GameMode.PASSTHROUGH},
+            # Mid-tier players
+            {"username": "SpeedDemon", "email": "speed@example.com", "high_score": 275, "games_played": 31, "mode": GameMode.WALLS},
+            {"username": "NinjaNoodle", "email": "ninja@example.com", "high_score": 310, "games_played": 42, "mode": GameMode.PASSTHROUGH},
+            {"username": "RetroGamer", "email": "retro@example.com", "high_score": 265, "games_played": 28, "mode": GameMode.WALLS},
+            {"username": "PixelPro", "email": "pixelpro@example.com", "high_score": 295, "games_played": 35, "mode": GameMode.PASSTHROUGH},
+            # New players
+            {"username": "Beginner123", "email": "beginner@example.com", "high_score": 120, "games_played": 15, "mode": GameMode.WALLS},
+            {"username": "JustStarted", "email": "newbie@example.com", "high_score": 85, "games_played": 8, "mode": GameMode.WALLS},
+            {"username": "LearningSnake", "email": "learning@example.com", "high_score": 95, "games_played": 12, "mode": GameMode.PASSTHROUGH},
         ]
         
-        return {
-            "snake": {
-                "body": body,
-                "direction": random.choice([Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]),
-            },
-            "food": {
-                "x": random.randint(0, 29),
-                "y": random.randint(0, 29),
-            },
-            "score": score,
-            "is_game_over": False,
-            "is_paused": False,
-            "mode": random.choice([GameMode.WALLS, GameMode.PASSTHROUGH]),
-        }
-
-
-# Global database instance
-db = MockDatabase()
+        # Password for all demo users
+        demo_password = "demo123"
+        
+        import random
+        
+        for data in mock_players_data:
+            try:
+                # Create user and player
+                user_dict = database.create_user(data["email"], data["username"], demo_password)
+                user_id = user_dict["id"]
+                
+                # Update player stats
+                player = database.session.execute(
+                    select(Player).where(Player.id == user_id)
+                ).scalar_one()
+                
+                player.high_score = data["high_score"]
+                player.games_played = data["games_played"]
+                
+                # Add high score
+                high_score_record = Score(
+                    user_id=user_id,
+                    username=data["username"],
+                    score=data["high_score"],
+                    mode=data["mode"],
+                    created_at=datetime.now(UTC) - timedelta(days=int(7 * (1 - data["high_score"] / 500)))
+                )
+                database.session.add(high_score_record)
+                
+                # Add some historical scores
+                for _ in range(random.randint(2, 5)):
+                    past_score = int(data["high_score"] * random.uniform(0.4, 0.9))
+                    past_score_record = Score(
+                        user_id=user_id,
+                        username=data["username"],
+                        score=past_score,
+                        mode=data["mode"],
+                        created_at=datetime.now(UTC) - timedelta(days=random.randint(1, 30))
+                    )
+                    database.session.add(past_score_record)
+                
+                database.session.commit()
+                
+            except ValueError as e:
+                # User already exists, skip
+                database.session.rollback()
+                continue
+        
+        print(f"✅ Database seeded with {len(mock_players_data)} players")

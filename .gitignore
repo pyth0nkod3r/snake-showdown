@@ -3,3 +3,4 @@
 # Root-level dependencies (concurrently)
 /node_modules
 /package-lock.json
+API_ARCHITECTURE.md

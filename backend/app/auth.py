@@ -6,9 +6,10 @@ from typing import Optional
 from jose import JWTError, jwt
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.database import db
+from app.database import get_db, Database
 
 # Security scheme
 security = HTTPBearer()
@@ -40,7 +41,10 @@ def decode_token(token: str) -> dict:
         )
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+) -> dict:
     """Get current authenticated user from token."""
     token = credentials.credentials
     payload = decode_token(token)
@@ -52,7 +56,8 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
             detail="Could not validate credentials",
         )
     
-    user = db.get_user_by_id(user_id)
+    database = Database(db)
+    user = database.get_user_by_id(user_id)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

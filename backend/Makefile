@@ -46,11 +46,11 @@ format:
 
 # Database initialization
 db-init:
-	uv run python -c "from app.database import init_db; init_db()"
+	uv run python app/init_db.py --seed
 
 # Database migrations (if using alembic)
 db-migrate:
-	@echo "Database migrations not yet configured"
+	uv run alembic upgrade head
 
 # Reset database (WARNING: destroys all data)
 db-reset:
@@ -58,7 +58,7 @@ db-reset:
 	@read -p "Type 'yes' to confirm: " confirm; \
 	if [ "$$confirm" = "yes" ]; then \
 		rm -f snake_showdown.db; \
-		uv run python -c "from app.database import init_db; init_db()"; \
+		uv run python app/init_db.py --seed; \
 		echo "Database reset complete"; \
 	else \
 		echo "Database reset cancelled"; \
