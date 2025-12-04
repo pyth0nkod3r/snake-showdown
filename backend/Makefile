@@ -36,6 +36,18 @@ test:
 test-cov:
 	uv run pytest --cov=app --cov-report=html --cov-report=term
 
+# Run integration tests
+test-integration:
+	uv run pytest tests_integration
+
+# Run all tests (unit + integration)
+test-all:
+	uv run pytest tests tests_integration
+
+# Run integration tests with coverage
+test-integration-cov:
+	uv run pytest tests_integration --cov=app --cov-report=html --cov-report=term
+
 # Lint code
 lint:
 	uv run ruff check app tests

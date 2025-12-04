@@ -3,7 +3,8 @@
  * Handles authentication, request/response interception, and error handling.
  */
 
-const API_BASE_URL = 'http://localhost:3000/api';
+// Use environment variable for API base URL, fallback to localhost for development
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 /**
  * Custom error class for API errors

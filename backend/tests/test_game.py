@@ -1,7 +1,6 @@
 """
 Tests for game endpoints.
 """
-import pytest
 
 
 def test_submit_score_success(client, auth_headers):
