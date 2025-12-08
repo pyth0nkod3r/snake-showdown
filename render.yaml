@@ -4,7 +4,7 @@ services:
     name: snake-showdown
     runtime: docker
     region: oregon
-    plan: starter
+    plan: free
     dockerfilePath: ./Dockerfile
     dockerContext: ./
     healthCheckPath: /health
@@ -49,5 +49,5 @@ databases:
     databaseName: snake_showdown
     user: snake_showdown
     region: oregon
-    plan: starter
+    plan: free
     ipAllowList: []
