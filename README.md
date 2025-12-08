@@ -5,6 +5,7 @@ A modern, full-stack Snake game with real-time leaderboards and spectating featu
 ## Quick Start
 
 ### Prerequisites
+
 - **Node.js** 18+ and npm
 - **Python** 3.12+
 - **uv** package manager for Python
@@ -22,12 +23,14 @@ npm run dev
 ```
 
 This will start:
+
 - **Frontend** on http://localhost:5173 (green output)
 - **Backend** on http://localhost:3000 (blue output)
 
 ### Running Individually
 
 **Backend only:**
+
 ```bash
 cd backend
 make dev
@@ -35,6 +38,7 @@ make dev
 ```
 
 **Frontend only:**
+
 ```bash
 cd frontend
 npm run dev
@@ -45,6 +49,7 @@ npm run dev
 The app comes pre-loaded with demo users for testing. You can log in with any of these credentials:
 
 **Email:** Any of the following:
+
 - `snake@example.com`
 - `neon@example.com`
 - `grid@example.com`
@@ -81,6 +86,7 @@ snake-showdown/
 ## Available Commands
 
 ### Root Level
+
 ```bash
 npm run dev              # Run both servers concurrently
 npm run dev:frontend     # Run frontend only
@@ -91,6 +97,7 @@ npm run test:backend     # Run backend tests
 ```
 
 ### Backend (from `/backend`)
+
 ```bash
 make dev        # Start dev server
 make test       # Run tests
@@ -103,6 +110,7 @@ make db-reset   # Reset database
 ```
 
 ### Frontend (from `/frontend`)
+
 ```bash
 npm run dev       # Start dev server
 npm run build     # Build for production
@@ -124,12 +132,14 @@ npm run lint      # Lint code
 ## Tech Stack
 
 **Frontend:**
+
 - React 18 + TypeScript
 - Vite (build tool)
 - TailwindCSS + shadcn/ui
 - Vitest (testing)
 
 **Backend:**
+
 - FastAPI (Python)
 - JWT authentication
 - Pydantic validation
@@ -138,12 +148,14 @@ npm run lint      # Lint code
 ## API Documentation
 
 Once the backend is running, visit:
+
 - **Swagger UI**: http://localhost:3000/docs
 - **ReDoc**: http://localhost:3000/redoc
 
 ## Development
 
 ### Frontend Setup
+
 ```bash
 cd frontend
 npm install
@@ -153,6 +165,7 @@ npm run dev
 The frontend connects to the backend API at `http://localhost:3000/api`.
 
 ### Backend Setup
+
 ```bash
 cd backend
 uv sync
@@ -164,11 +177,13 @@ See [backend/README.md](backend/README.md) for detailed backend documentation.
 ## Testing
 
 Run all tests:
+
 ```bash
 npm test
 ```
 
 Or individually:
+
 ```bash
 # Backend tests (from /backend)
 make test

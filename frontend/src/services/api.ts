@@ -78,9 +78,27 @@ async function apiRequest<T>(
                 // Let the component handle the redirect
             }
 
+            // Parse error message
+            let errorMessage = `HTTP ${response.status}`;
+            
+            // Handle FastAPI validation errors (Pydantic)
+            if (Array.isArray(errorData.detail)) {
+                // Format validation errors into a readable message
+                const validationErrors = errorData.detail.map((err: any) => {
+                    const field = err.loc?.[err.loc.length - 1] || 'field';
+                    const message = err.msg || 'Invalid value';
+                    return `${field}: ${message}`;
+                });
+                errorMessage = validationErrors.join(', ');
+            } else if (typeof errorData.detail === 'string') {
+                errorMessage = errorData.detail;
+            } else if (errorData.message) {
+                errorMessage = errorData.message;
+            }
+
             throw new ApiError(
                 response.status,
-                errorData.detail || errorData.message || `HTTP ${response.status}`,
+                errorMessage,
                 errorData
             );
         }

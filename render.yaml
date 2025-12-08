@@ -1,0 +1,54 @@
+services:
+  # Web Service - Snake Showdown Application
+  - type: web
+    name: snake-showdown
+    runtime: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Database Connection
+      - key: DATABASE_URL
+        fromDatabase:
+          name: snake-showdown-db
+          property: connectionString
+
+      # JWT Configuration
+      - key: SECRET_KEY
+        generateValue: true
+        sync: false
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 1440
+
+      # CORS Configuration
+      # Will be set to your Render URL after deployment
+      - key: CORS_ORIGINS
+        sync: false
+
+      # Environment
+      - key: ENVIRONMENT
+        value: production
+
+      # Database Settings
+      - key: DATABASE_ECHO
+        value: false
+      - key: DATABASE_POOL_SIZE
+        value: 10
+      - key: DATABASE_MAX_OVERFLOW
+        value: 20
+
+      # Seed Database (set to false after first deployment)
+      - key: SEED_DB
+        value: true
+
+databases:
+  # PostgreSQL Database
+  - name: snake-showdown-db
+    databaseName: snake_showdown
+    user: snake_showdown
+    region: oregon
+    plan: starter
+    ipAllowList: []

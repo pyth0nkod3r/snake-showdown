@@ -1,0 +1,19 @@
+deploy_to_render:
+	@echo "🚀 Deploying to Render..."
+	@echo ""
+	@echo "📋 Pre-deployment checklist:"
+	@echo "  ✓ Ensure all tests pass (run 'make test')"
+	@echo "  ✓ Commit all changes to Git"
+	@echo "  ✓ Push to main branch"
+	@echo ""
+	@echo "🔗 Render Setup:"
+	@echo "  1. Go to https://render.com/dashboard"
+	@echo "  2. Click 'New' → 'Blueprint'"
+	@echo "  3. Connect your GitHub repository"
+	@echo "  4. Render will detect render.yaml automatically"
+	@echo "  5. Click 'Apply' to deploy"
+	@echo ""
+	@echo "📖 For detailed instructions, see RENDER_DEPLOY.md"
+	@echo ""
+
+.PHONY: deploy_to_render
