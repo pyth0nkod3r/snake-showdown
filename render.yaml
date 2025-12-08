@@ -19,14 +19,13 @@ services:
       # JWT Configuration
       - key: SECRET_KEY
         generateValue: true
-        sync: false
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: 1440
 
       # CORS Configuration
       # Will be set to your Render URL after deployment
       - key: CORS_ORIGINS
-        sync: false
+        value: '["https://your-app.onrender.com"]'
 
       # Environment
       - key: ENVIRONMENT
