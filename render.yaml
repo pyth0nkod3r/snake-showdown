@@ -8,7 +8,7 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: ./
     healthCheckPath: /health
-    autoDeploy: true
+    autoDeploy: false
     envVars:
       # Database Connection
       - key: DATABASE_URL
