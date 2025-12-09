@@ -1,5 +1,7 @@
 # Snake Showdown 🐍
 
+<!-- CI/CD Pipeline Active -->
+
 A modern, full-stack Snake game with real-time leaderboards and spectating features.
 
 ## Quick Start
