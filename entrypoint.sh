@@ -8,27 +8,32 @@ export PORT=${PORT:-10000}
 echo "Configuring nginx to listen on port $PORT..."
 envsubst '${PORT}' < /etc/nginx/conf.d/nginx.conf.template > /etc/nginx/conf.d/default.conf
 
-# Wait for PostgreSQL to be ready
-echo "Waiting for PostgreSQL..."
-until uv run python -c "
+# Wait for PostgreSQL to be ready (with timeout)
+if [ -n "$DATABASE_URL" ]; then
+  echo "Waiting for PostgreSQL..."
+  timeout=30
+  elapsed=0
+  until uv run python -c "
 import sys
-import psycopg2
+import os
+from sqlalchemy import create_engine
 try:
-    psycopg2.connect(
-        host='$DB_HOST',
-        port='$DB_PORT',
-        user='postgres',
-        password='postgres123',
-        dbname='snake_showdown',
-        connect_timeout=3
-    ).close()
+    engine = create_engine(os.environ['DATABASE_URL'])
+    conn = engine.connect()
+    conn.close()
     sys.exit(0)
-except Exception:
+except Exception as e:
     sys.exit(1)
 " 2>/dev/null; do
-  sleep 0.5
-done
-echo "PostgreSQL is ready!"
+    if [ $elapsed -ge $timeout ]; then
+      echo "⚠️  PostgreSQL connection timeout - continuing anyway..."
+      break
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+  echo "PostgreSQL is ready!"
+fi
 
 # Initialize database tables
 echo "Initializing database..."
