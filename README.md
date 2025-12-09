@@ -96,6 +96,28 @@ npm run test:frontend    # Run frontend tests
 npm run test:backend     # Run backend tests
 ```
 
+## CI/CD Pipeline
+
+This project uses GitHub Actions for continuous integration and deployment:
+
+- ✅ **Automated Testing**: Backend unit tests, backend integration tests, and frontend tests run on every push to main
+- ✅ **Conditional Deployment**: Deployment to Render only happens if all tests pass
+- ✅ **Parallel Execution**: Tests run concurrently for faster feedback
+
+### Pipeline Workflow
+
+1. **Push to main** → Triggers CI/CD pipeline
+2. **Test Jobs Run** (in parallel):
+   - Backend unit tests with pytest
+   - Backend integration tests with pytest
+   - Frontend tests with Vitest
+3. **If all tests pass** → Deploy to Render
+4. **If any test fails** → Deployment blocked
+
+View pipeline status in the **Actions** tab on GitHub.
+
+**Setup:** See [.github/RENDER_DEPLOY_SETUP.md](.github/RENDER_DEPLOY_SETUP.md) for deployment configuration.
+
 ### Backend (from `/backend`)
 
 ```bash
