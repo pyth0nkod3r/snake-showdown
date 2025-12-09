@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+# Set default PORT if not provided (for local development)
+export PORT=${PORT:-10000}
+
+# Generate nginx config from template with PORT substitution
+echo "Configuring nginx to listen on port $PORT..."
+envsubst '${PORT}' < /etc/nginx/conf.d/nginx.conf.template > /etc/nginx/conf.d/default.conf
+
 # Wait for PostgreSQL to be ready
 echo "Waiting for PostgreSQL..."
 until uv run python -c "

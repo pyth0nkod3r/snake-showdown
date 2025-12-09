@@ -80,9 +80,9 @@ COPY --from=backend-base /app ./
 # Copy frontend build from frontend-build stage
 COPY --from=frontend-build /app/frontend/dist /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-RUN rm -f /etc/nginx/sites-enabled/default
+# Copy nginx configuration template
+COPY nginx.conf.template /etc/nginx/conf.d/nginx.conf.template
+RUN rm -f /etc/nginx/sites-enabled/default /etc/nginx/conf.d/default.conf
 
 # Copy supervisor configuration
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
@@ -94,12 +94,12 @@ RUN chmod +x /app/entrypoint.sh
 # Create log directories
 RUN mkdir -p /var/log/supervisor /var/log/nginx
 
-# Expose port 80 (nginx)
-EXPOSE 80
+# Expose port (will be set by Render via PORT env var)
+EXPOSE ${PORT:-10000}
 
-# Health check
+# Health check (uses PORT environment variable)
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
-    CMD curl -f http://localhost/health || exit 1
+    CMD curl -f http://localhost:${PORT:-10000}/health || exit 1
 
 # Run entrypoint script
 ENTRYPOINT ["/app/entrypoint.sh"]
